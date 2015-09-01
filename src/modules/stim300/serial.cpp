@@ -324,7 +324,7 @@ Serial::sync2_0xA5(void){
 			numBytesRead+=numBytes;
 			if(numBytes==1){
 				if( buffer==0xA5 ){ //found 0xA5
-//					printf("found sync after %lu bits\n",numBytesRead);
+					printf("found sync after %lu bits\n",numBytesRead);
 					return;
 				}
 			}

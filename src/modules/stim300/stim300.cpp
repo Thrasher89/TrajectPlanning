@@ -131,10 +131,6 @@ Stim300::wePilot_crc(uint8_t *data, int len)
 
 	return crc;
 }
-
-
-
-
 Stim300*
 Stim300::Instance()
 {
@@ -179,8 +175,6 @@ Stim300::getDatagramm(dataGramms type){
 			      return NULL;
 		      }
 	}
-
-
 	return dataBuffer;
 }
 uint8_t*
@@ -199,19 +193,15 @@ Stim300::getDatagrammWePilot(dataGramms type){
 		return NULL;
 	}
 	/**
-		  * check crc id is correct
-		  */
-	if (type == wePilot){
-//		toBeCrc =  wePilot_crc(dataBufferWePilot, getDatagrammSize(type));
-		toBeCrc =  (uint8_t)(checkSum % (uint16_t)256);
+	  * check crc id is correct
+	  */
+	toBeCrc =  (uint8_t)(checkSum % (uint16_t)256);
 
-		      if(dataBufferWePilot[getDatagrammSize(type)-1] != toBeCrc){
-			      datagrammCRCErrCnt++;
-			      printf("checksum error crcCalc: %02x instead of: %02x\n",toBeCrc,dataBufferWePilot[getDatagrammSize(type)-1]);
-			      return NULL;
-		      }
+	if(dataBufferWePilot[getDatagrammSize(type)-1] != toBeCrc){
+		datagrammCRCErrCnt++;
+		printf("checksum error crcCalc: %02x instead of: %02x\n",toBeCrc,dataBufferWePilot[getDatagrammSize(type)-1]);
+		return NULL;
 	}
-
 	return dataBufferWePilot;
 }
 uint8_t*
@@ -285,221 +275,22 @@ Stim300::startUp(){
 	serialOpen();
 
 	usleep(100);
-//	if(!isDataAvailable()){
-//		printf("Stim300 not connected or power up\n");
-//		while(!isDataAvailable()){
-//			sleep(1);
-//		}
-//	}
-	/**
-	  * Serial data available here
-	  * check of Stim300
-	  */
+	printf("\rStarting up Stim300");
+	fflush(stdout);
+	sleep(1);
 
-
-	for(int i=3; i>0; i--){
-		printf("\rStarting up Stim300 in %d",i);
-		fflush(stdout);
-		sleep(1);
-	}
-	printf("\rStarting up like Hell!");
+	printf("\rStarting up");
 	serialOpen(true);
 
-	/**
-	  *Dont know why but I have to send SERVICEMOD 3times to work
-	  */
-	putCmd((char*)"SERVICEMODE\r");
-	putCmd((char*)"SERVICEMODE\r");
-	putCmd((char*)"SERVICEMODE\r");
-	//sync();
-	/**
-	  * No sync or flush function in Nuttix yet
-	  * so close and open port
-	   */
+
 	serialOpen(true);
 	
-	/**
-	  *Print sensor infos
-	  */
-	putCmd((char*)"i\r");
 	usleep(50);
-	while(isDataAvailable())
-		printAscii(1);
-	putCmd((char*)"x N\r");
-	putCmd((char*)"x N\r");
 
-	// start manipulation
-	printf("start reading\n");
 	::fflush(NULL);
 	usleep(1000);
 	printf("start reading now\n");
 
-
-// ##############
-// ##   START  ##
-// ##############
-
-	/*
-	* do subscriptions
-	*/
-
-	_global_position_sub = orb_subscribe(ORB_ID(vehicle_global_position));
-	_local_position_sub = orb_subscribe(ORB_ID(vehicle_local_position));
-	_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
-
-	/*
-	* do advertisements
-	*/
-	struct s_datagram_wePilot* raw;
-	memset(&raw, 0, sizeof(raw));
-	/* advertise the sensor_combined topic and make the initial publication */
-	_global_position_pub = orb_advertise(ORB_ID(vehicle_local_position), &raw);
-	_local_position_pub = orb_advertise(ORB_ID(vehicle_local_position), &raw);
-	_attitude_pub = orb_advertise(ORB_ID(vehicle_attitude), &raw);
-
-
-	hrt_abstime timeStart; //typedef uint64_t hrt_abstime; src/drivers/stm32/drv_hrt.c
-//	int Start2DatareadTime;
-//	int Start2ConvertionTime;
-//	int Start2PublishTime;
-	int timeTotal;
-
-
-	uint8_t* receivedData;
-	int cnt = 0;
-
-	timeStart = hrt_absolute_time(); // Start time
-	while(cnt<100){
-	sync2_0xA5();
-
-
-	receivedData = getDatagrammWePilot(wePilot);
-//	receivedData = getDatagrammWePilotFast(wePilot);
-
-//	Start2DatareadTime  = (int)(hrt_absolute_time()-timeStart); // Stop time
-
-	raw = reinterpret_cast<struct s_datagram_wePilot*>(receivedData);
-
-//	Global Position
-	_global_position.lat = (double)conv32bit2int32(raw->latPos[3], raw->latPos[2],raw->latPos[1],raw->latPos[0])/100000000.0L;
-	_global_position.lon = (double)conv32bit2int32(raw->lonPos[3], raw->lonPos[2],raw->lonPos[1],raw->lonPos[0])/100000000.0L;
-	_global_position.alt = (float)conv32bit2int32(raw->altPos[3], raw->altPos[2],raw->altPos[1],raw->altPos[0])/1000.0f;
-	_global_position.vel_n = (float)conv32bit2float(raw->gndVelN[3], raw->gndVelN[2],raw->gndVelN[1],raw->gndVelN[0]);
-	_global_position.vel_e = (float)conv32bit2float(raw->gndVelE[3], raw->gndVelE[2],raw->gndVelE[1],raw->gndVelE[0]);
-	_global_position.vel_d = (float)conv32bit2float(raw->gndVelD[3], raw->gndVelD[2],raw->gndVelD[1],raw->gndVelD[0]);
-
-//	Local Position
-	_local_position.x = (float)conv32bit2int32(raw->relPosN[3], raw->relPosN[2],raw->relPosN[1],raw->relPosN[0])/100.0f;
-	_local_position.y = (float)conv32bit2int32(raw->relPosE[3], raw->relPosE[2],raw->relPosE[1],raw->relPosE[0])/100.0f;
-	_local_position.z = (float)conv32bit2int32(raw->relPosD[3], raw->relPosD[2],raw->relPosD[1],raw->relPosD[0])/100.0f;
-
-//	Attitude
-	_attitude.roll = (float)conv16bit2int16(raw->roll[1],raw->roll[0])/10000.0f*180.0f/(float)M_PI;
-	_attitude.pitch = (float)conv16bit2int16(raw->pitch[1],raw->pitch[0])/10000.0f*180.0f/(float)M_PI;
-	_attitude.yaw = (float)conv16bit2int16(raw->yaw[1],raw->yaw[0])/10000.0f*180.0f/(float)M_PI;
-	_attitude.rollspeed = (float)conv16bit2int16(raw->p[1],raw->p[0])/1000.0f*180.0f/(float)M_PI;
-	_attitude.pitchspeed = (float)conv16bit2int16(raw->q[1],raw->q[0])/1000.0f*180.0f/(float)M_PI;
-	_attitude.yawspeed = (float)conv16bit2int16(raw->r[1],raw->r[0])/1000.0f*180.0f/(float)M_PI;
-
-//	Bodyframe Speed
-	_bodyframe_speed.vx = (float)conv16bit2int16(raw->refU[1],raw->refU[0])/1000.0f;
-	_bodyframe_speed.vy = (float)conv16bit2int16(raw->refV[1],raw->refV[0])/1000.0f;
-	_bodyframe_speed.vz = (float)conv16bit2int16(raw->refW[1],raw->refW[0])/1000.0f;
-	_bodyframe_speed.yaw_sp = (float)conv16bit2int16(raw->refR[1],raw->refR[0])/1000.0f;
-
-//	wePilot
-	_wePilot.fx = (float)conv32bit2float(raw->fX[3],raw->fX[2],raw->fX[1],raw->fX[0]);
-	_wePilot.fy = (float)conv32bit2float(raw->fY[3],raw->fY[2],raw->fY[1],raw->fY[0]);
-	_wePilot.fz = (float)conv32bit2float(raw->fZ[3],raw->fZ[2],raw->fZ[1],raw->fZ[0]);
-	_wePilot.hx = conv16bit2int16(raw->hx[1],raw->hx[0]);
-	_wePilot.hy = conv16bit2int16(raw->hy[1],raw->hy[0]);
-	_wePilot.hz = conv16bit2int16(raw->hz[1],raw->hz[0]);
-	_wePilot.rotor = conv16bit2uint16(raw->rotor[1],raw->rotor[0]);
-	_wePilot.time.hours = conv8bit2uint8(raw->time[3]);
-	_wePilot.time.minutes = conv8bit2uint8(raw->time[2]);
-	_wePilot.time.seconds = (float)conv16bit2uint16(raw->time[1],raw->time[0])/1000.0f;
-	_wePilot.fcsState = conv8bit2uint8(raw->status[0] & 0b00001111);
-	_wePilot.pwm_inp7 = conv8bit2uint8(raw->status[0] & 0b00010000)>>4;
-	_wePilot.gpsSat = conv8bit2uint8(raw->status[1] & 0b00001111);
-
-
-// TBD: ref-Werte, time, status...
-
-//	Start2ConvertionTime  = (int)(hrt_absolute_time()-timeStart); // Stop time
-
-//  Publish
-
-	/* announce the Global Position if needed, just publish else */
-	if (_global_position_pub > 0) orb_publish(ORB_ID(vehicle_global_position), _global_position_pub, &_global_position);
-	else _global_position_pub = orb_advertise(ORB_ID(vehicle_global_position), &_global_position);
-	/* announce the Local Position if needed, just publish else */
-	if (_local_position_pub > 0) orb_publish(ORB_ID(vehicle_local_position), _local_position_pub, &_local_position);
-	else _local_position_pub = orb_advertise(ORB_ID(vehicle_local_position), &_local_position);
-	/* announce the Attitude if needed, just publish else */
-	if (_attitude_pub > 0) orb_publish(ORB_ID(vehicle_attitude), _attitude_pub, &_attitude);
-	else _attitude_pub = orb_advertise(ORB_ID(vehicle_attitude), &_attitude);
-	/* announce the Bodyframe Speed if needed, just publish else */
-	if (_bodyframe_speed_pub > 0) orb_publish(ORB_ID(vehicle_bodyframe_speed), _bodyframe_speed_pub, &_bodyframe_speed);
-	else _bodyframe_speed_pub = orb_advertise(ORB_ID(vehicle_bodyframe_speed), &_bodyframe_speed);
-	/* announce the wePilot if needed, just publish else */
-	if (_wePilot_pub > 0) orb_publish(ORB_ID(wePilot), _wePilot_pub, &_wePilot);
-	else _wePilot_pub = orb_advertise(ORB_ID(wePilot), &_wePilot);
-
-//	Start2PublishTime  = (int)(hrt_absolute_time()-timeStart); // Stop time
-
-//  Subscribe
-
-	bool updated;
-//	Check update Global Position
-	orb_check(_global_position_sub, &updated);
-	if (updated) orb_copy(ORB_ID(vehicle_global_position), _global_position_sub, &_global_position);
-	else printf("Global Position not subscribed!\n");
-//	Check update Local Position
-	orb_check(_local_position_sub, &updated);
-	if (updated) orb_copy(ORB_ID(vehicle_local_position), _local_position_sub, &_local_position);
-	else printf("Local Position not subscribed!\n");
-//	Check update Attitude
-	orb_check(_attitude_sub, &updated);
-	if (updated) orb_copy(ORB_ID(vehicle_attitude), _attitude_sub, &_attitude);
-	else printf("Attitude not subscribed!\n");
-//	Check update Bodyframe Speed
-	orb_check(_bodyframe_speed_sub, &updated);
-	if (updated) orb_copy(ORB_ID(vehicle_bodyframe_speed), _bodyframe_speed_sub, &_bodyframe_speed);
-	else printf("Bodyframe Speed not subscribed!\n");
-	//	Check update wePilot
-	orb_check(_wePilot_sub, &updated);
-	if (updated) orb_copy(ORB_ID(wePilot), _wePilot_sub, &_wePilot);
-	else printf("wePilot not subscribed!\n");
-
-	//	Print all datas
-
-//
-		printf("Message: %d\n",cnt);
-		printf("Global Position: lat: %4.8f, long: %4.8f, alt: %4.1f\n", (double)_global_position.lat, (double)_global_position.lon, (double)_global_position.alt);
-		printf("Global Position: vel_n: %4.2f, vel_e: %4.2f, vel_d: %4.2f\n", (double)_global_position.vel_n, (double)_global_position.vel_e, (double)_global_position.vel_d);
-		printf("Local Position: x: %4.2f, y: %4.2f, z: %4.2f\n", (double)_local_position.x, (double)_local_position.y, (double)_local_position.z);
-		printf("Attitude: roll: %4.8f, pitch: %4.8f, yaw: %4.8f\n", (double)_attitude.roll, (double)_attitude.pitch, (double)_attitude.yaw);
-		printf("Attitude: rollspeed: %4.8f, pitchspeed: %4.8f, yawspeed: %4.8f\n", (double)_attitude.rollspeed, (double)_attitude.pitchspeed, (double)_attitude.yawspeed);
-		printf("Bodyframe: vx: %4.8f, vy: %4.8f, vz: %4.8f\n", (double)_bodyframe_speed.vx, (double)_bodyframe_speed.vy, (double)_bodyframe_speed.vz, (double)_bodyframe_speed.yaw_sp);
-		printf("wePilot: fx: %4.8f, fy: %4.8f, fz: %4.8f\n", (double)_wePilot.fx, (double)_wePilot.fy, (double)_wePilot.fz);
-		printf("wePilot: hx: %d, hy: %d, hz: %d\n", _wePilot.hx, _wePilot.hy, _wePilot.hz);
-		printf("wePilot: Hours: %u, Minutes: %u, Seconds: %4.8f\n", _wePilot.time.hours, _wePilot.time.minutes, (double)_wePilot.time.seconds);
-		printf("wePilot: Rotor: %u, FCS State: %u, PWM: %u, GPS Sat: %u\n", _wePilot.rotor, _wePilot.fcsState, _wePilot.pwm_inp7, _wePilot.gpsSat);
-		printf("\n");
-
-//		printf("Cnt: %d, Start2DatareadTime: %u, Start2ConvertionTime: %u, Start2PublishTime: %u, timeTotal: %u\n",cnt,Start2DatareadTime, Start2ConvertionTime, Start2PublishTime, timeTotal);
-
-
-	cnt++;
-	}
-	timeTotal  = (int)(hrt_absolute_time()-timeStart); // Stop time
-	printf("Cnt: %d, , timeTotal: %u\n",cnt, timeTotal);
-
-	/**
-	  *We have to read the answer value that the sensor goes back to normalmode
-	  */
-	uint8_t temp[101];
-	getData(temp,100);
 	serialClose();
 	usleep(200);
 	state=idle;
@@ -546,208 +337,162 @@ Stim300::readThreadTrampolin(const char** data)
 void
 Stim300::readThread()
 {
+	struct s_datagram_wePilot* raw;
+	memset(&raw, 0, sizeof(raw));
+	hrt_abstime timeStart; //typedef uint64_t hrt_abstime; src/drivers/stm32/drv_hrt.c
+//	int Start2DatareadTime;
+//	int Start2ConvertionTime;
+//	int Start2PublishTime;
+	int timeTotal;
+	uint8_t* receivedData;
+	int cnt = 0;
+
+	/*
+	* do subscriptions
+	*/
+	_global_position_sub = orb_subscribe(ORB_ID(vehicle_global_position));
+	_local_position_sub = orb_subscribe(ORB_ID(vehicle_local_position));
+	_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+	/*
+	* do advertisements
+	*/
+	/* advertise the sensor_combined topic and make the initial publication */
+	_global_position_pub = orb_advertise(ORB_ID(vehicle_local_position), &raw);
+	_local_position_pub = orb_advertise(ORB_ID(vehicle_local_position), &raw);
+	_attitude_pub = orb_advertise(ORB_ID(vehicle_attitude), &raw);
+
 	printf("in readThread\n");
 	printf("start stream reading\n");
 	serialOpen();
-	out.init("/dev/ttyACM0",921600);
-	out.serialOpen(true);
-#ifdef STREAM_MPU600
-	board_accel_init();
-	int _accel_sub= orb_subscribe(ORB_ID(sensor_accel0));
-	int _gyro_sub= orb_subscribe(ORB_ID(sensor_gyro0));
-	bool accel_updated;
-	struct accel_report accel_report;
-	struct gyro_report gyro_report;
-#endif
-//	bool gps_updated;
-//	int _gps_heading_sub = orb_subscribe(ORB_ID(novatel_heading));
-//	int _gps_position_sub = orb_subscribe(ORB_ID(novatel_bestpos));
-//	int _gps_velocity_sub = orb_subscribe(ORB_ID(novatel_bestvel));
+
+	::fflush(NULL);
 
 
-		/*
-		float ax,ay,az;
-		float gx,gy,gz;
-		ax=ay=az=gx=gy=gz=0;
-		unsigned downsample=1;
-		*/
-		uint8_t outBuffer[64];
-
-		
-		::fflush(NULL);
-		//int n=0;
-		//::read(outfd,&n,1);
-		printf("start streaming\n");
-		sync2CR_LF();
+//	sync2_0xA5();
+	state=streaming;
 
 
-	//for(int k=0;k<2000*60;k++){
-		state=streaming;
 
-		uint8_t* data;
-		struct s_datagram_normalMode_93* pack;
-		hrt_abstime time; //typedef uint64_t hrt_abstime; src/drivers/stm32/drv_hrt.c
-		int i=0;
 	while(1){
-		i=0;
+		printf("in while\n");
+		timeStart = hrt_absolute_time(); // Start time
+		sync2_0xA5();
+		receivedData = getDatagrammWePilot(wePilot);
+		if(receivedData==NULL)
+					continue;
+		raw = reinterpret_cast<struct s_datagram_wePilot*>(receivedData);
+
+	//	Start2DatareadTime  = (int)(hrt_absolute_time()-timeStart); // Stop time
+
+	//	Global Position
+		_global_position.lat = (double)conv32bit2int32(raw->latPos[3], raw->latPos[2],raw->latPos[1],raw->latPos[0])/100000000.0L;
+		_global_position.lon = (double)conv32bit2int32(raw->lonPos[3], raw->lonPos[2],raw->lonPos[1],raw->lonPos[0])/100000000.0L;
+		_global_position.alt = (float)conv32bit2int32(raw->altPos[3], raw->altPos[2],raw->altPos[1],raw->altPos[0])/1000.0f;
+		_global_position.vel_n = (float)conv32bit2float(raw->gndVelN[3], raw->gndVelN[2],raw->gndVelN[1],raw->gndVelN[0]);
+		_global_position.vel_e = (float)conv32bit2float(raw->gndVelE[3], raw->gndVelE[2],raw->gndVelE[1],raw->gndVelE[0]);
+		_global_position.vel_d = (float)conv32bit2float(raw->gndVelD[3], raw->gndVelD[2],raw->gndVelD[1],raw->gndVelD[0]);
+
+	//	Local Position
+		_local_position.x = (float)conv32bit2int32(raw->relPosN[3], raw->relPosN[2],raw->relPosN[1],raw->relPosN[0])/100.0f;
+		_local_position.y = (float)conv32bit2int32(raw->relPosE[3], raw->relPosE[2],raw->relPosE[1],raw->relPosE[0])/100.0f;
+		_local_position.z = (float)conv32bit2int32(raw->relPosD[3], raw->relPosD[2],raw->relPosD[1],raw->relPosD[0])/100.0f;
+
+	//	Attitude
+		_attitude.roll = (float)conv16bit2int16(raw->roll[1],raw->roll[0])/10000.0f*180.0f/(float)M_PI;
+		_attitude.pitch = (float)conv16bit2int16(raw->pitch[1],raw->pitch[0])/10000.0f*180.0f/(float)M_PI;
+		_attitude.yaw = (float)conv16bit2int16(raw->yaw[1],raw->yaw[0])/10000.0f*180.0f/(float)M_PI;
+		_attitude.rollspeed = (float)conv16bit2int16(raw->p[1],raw->p[0])/1000.0f*180.0f/(float)M_PI;
+		_attitude.pitchspeed = (float)conv16bit2int16(raw->q[1],raw->q[0])/1000.0f*180.0f/(float)M_PI;
+		_attitude.yawspeed = (float)conv16bit2int16(raw->r[1],raw->r[0])/1000.0f*180.0f/(float)M_PI;
+
+	//	Bodyframe Speed
+		_bodyframe_speed.vx = (float)conv16bit2int16(raw->refU[1],raw->refU[0])/1000.0f;
+		_bodyframe_speed.vy = (float)conv16bit2int16(raw->refV[1],raw->refV[0])/1000.0f;
+		_bodyframe_speed.vz = (float)conv16bit2int16(raw->refW[1],raw->refW[0])/1000.0f;
+		_bodyframe_speed.yaw_sp = (float)conv16bit2int16(raw->refR[1],raw->refR[0])/1000.0f;
+
+	//	wePilot
+		_wePilot.fx = (float)conv32bit2float(raw->fX[3],raw->fX[2],raw->fX[1],raw->fX[0]);
+		_wePilot.fy = (float)conv32bit2float(raw->fY[3],raw->fY[2],raw->fY[1],raw->fY[0]);
+		_wePilot.fz = (float)conv32bit2float(raw->fZ[3],raw->fZ[2],raw->fZ[1],raw->fZ[0]);
+		_wePilot.hx = conv16bit2int16(raw->hx[1],raw->hx[0]);
+		_wePilot.hy = conv16bit2int16(raw->hy[1],raw->hy[0]);
+		_wePilot.hz = conv16bit2int16(raw->hz[1],raw->hz[0]);
+		_wePilot.rotor = conv16bit2uint16(raw->rotor[1],raw->rotor[0]);
+		_wePilot.time.hours = conv8bit2uint8(raw->time[3]);
+		_wePilot.time.minutes = conv8bit2uint8(raw->time[2]);
+		_wePilot.time.seconds = (float)conv16bit2uint16(raw->time[1],raw->time[0])/1000.0f;
+		_wePilot.fcsState = conv8bit2uint8(raw->status[0] & 0b00001111);
+		_wePilot.pwm_inp7 = conv8bit2uint8(raw->status[0] & 0b00010000)>>4;
+		_wePilot.gpsSat = conv8bit2uint8(raw->status[1] & 0b00001111);
 
 
-		data = getDatagramm(NORMAL_MODE_93);
-		if(data==NULL)
-			continue;
-		pack = reinterpret_cast<struct s_datagram_normalMode_93*>(data);
-		time=hrt_absolute_time();
+	//	Start2ConvertionTime  = (int)(hrt_absolute_time()-timeStart); // Stop time
 
+	//  Publish
+		/* announce the Global Position if needed, just publish else */
+		if (_global_position_pub > 0) orb_publish(ORB_ID(vehicle_global_position), _global_position_pub, &_global_position);
+		else _global_position_pub = orb_advertise(ORB_ID(vehicle_global_position), &_global_position);
+		/* announce the Local Position if needed, just publish else */
+		if (_local_position_pub > 0) orb_publish(ORB_ID(vehicle_local_position), _local_position_pub, &_local_position);
+		else _local_position_pub = orb_advertise(ORB_ID(vehicle_local_position), &_local_position);
+		/* announce the Attitude if needed, just publish else */
+		if (_attitude_pub > 0) orb_publish(ORB_ID(vehicle_attitude), _attitude_pub, &_attitude);
+		else _attitude_pub = orb_advertise(ORB_ID(vehicle_attitude), &_attitude);
+		/* announce the Bodyframe Speed if needed, just publish else */
+		if (_bodyframe_speed_pub > 0) orb_publish(ORB_ID(vehicle_bodyframe_speed), _bodyframe_speed_pub, &_bodyframe_speed);
+		else _bodyframe_speed_pub = orb_advertise(ORB_ID(vehicle_bodyframe_speed), &_bodyframe_speed);
+		/* announce the wePilot if needed, just publish else */
+		if (_wePilot_pub > 0) orb_publish(ORB_ID(wePilot), _wePilot_pub, &_wePilot);
+		else _wePilot_pub = orb_advertise(ORB_ID(wePilot), &_wePilot);
 
+	//	Start2PublishTime  = (int)(hrt_absolute_time()-timeStart); // Stop time
 
+	//  Subscribe
+		bool updated;
+	//	Check update Global Position
+		orb_check(_global_position_sub, &updated);
+		if (updated) orb_copy(ORB_ID(vehicle_global_position), _global_position_sub, &_global_position);
+		else printf("Global Position not subscribed!\n");
+	//	Check update Local Position
+		orb_check(_local_position_sub, &updated);
+		if (updated) orb_copy(ORB_ID(vehicle_local_position), _local_position_sub, &_local_position);
+		else printf("Local Position not subscribed!\n");
+	//	Check update Attitude
+		orb_check(_attitude_sub, &updated);
+		if (updated) orb_copy(ORB_ID(vehicle_attitude), _attitude_sub, &_attitude);
+		else printf("Attitude not subscribed!\n");
+		//	Check update Bodyframe Speed
+		orb_check(_bodyframe_speed_sub, &updated);
+		if (updated) orb_copy(ORB_ID(vehicle_bodyframe_speed), _bodyframe_speed_sub, &_bodyframe_speed);
+		else printf("Bodyframe Speed not subscribed!\n");
+		//	Check update wePilot
+		orb_check(_wePilot_sub, &updated);
+		if (updated) orb_copy(ORB_ID(wePilot), _wePilot_sub, &_wePilot);
+		else printf("wePilot not subscribed!\n");
 
+		timeTotal  = (int)(hrt_absolute_time()-timeStart); // Stop time
 
-		/*
-		if(n++==downsample){
-			dprintf(outfd,"%2.4f,%2.4f,%2.4f,%2.4f,%2.4f,%2.4f\n",
-					(double)ax/downsample,(double)ay/downsample,(double)az/downsample,
-					(double)gx/downsample,(double)gy/downsample,(double)gz/downsample);
-			n=0;
-			ax=ay=az=gx=gy=gz=0;
-		}
-		else{
-			ax+=conv24bit2float(pack->accX[0],pack->accX[1],pack->accX[2],524288);
-			ay+=conv24bit2float(pack->accY[0],pack->accY[1],pack->accY[2],524288);
-			az+=conv24bit2float(pack->accZ[0],pack->accZ[1],pack->accZ[2],524288);
-			gx+=conv24bit2float(pack->gyroX[0],pack->gyroX[1],pack->gyroX[2],2097152);
-			gy+=conv24bit2float(pack->gyroY[0],pack->gyroY[1],pack->gyroY[2],2097152);
-			gz+=conv24bit2float(pack->gyroZ[0],pack->gyroZ[1],pack->gyroZ[2],2097152);
-		}
-		*/
+		//	Print all datas
+		printf("Message: %d\n",cnt);
+		printf("Global Position: lat: %4.8f, long: %4.8f, alt: %4.1f\n", (double)_global_position.lat, (double)_global_position.lon, (double)_global_position.alt);
+		printf("Global Position: vel_n: %4.2f, vel_e: %4.2f, vel_d: %4.2f\n", (double)_global_position.vel_n, (double)_global_position.vel_e, (double)_global_position.vel_d);
+		printf("Local Position: x: %4.2f, y: %4.2f, z: %4.2f\n", (double)_local_position.x, (double)_local_position.y, (double)_local_position.z);
+		printf("Attitude: roll: %4.8f, pitch: %4.8f, yaw: %4.8f\n", (double)_attitude.roll, (double)_attitude.pitch, (double)_attitude.yaw);
+		printf("Attitude: rollspeed: %4.8f, pitchspeed: %4.8f, yawspeed: %4.8f\n", (double)_attitude.rollspeed, (double)_attitude.pitchspeed, (double)_attitude.yawspeed);
+		printf("Bodyframe: vx: %4.8f, vy: %4.8f, vz: %4.8f\n", (double)_bodyframe_speed.vx, (double)_bodyframe_speed.vy, (double)_bodyframe_speed.vz, (double)_bodyframe_speed.yaw_sp);
+		printf("wePilot: fx: %4.8f, fy: %4.8f, fz: %4.8f\n", (double)_wePilot.fx, (double)_wePilot.fy, (double)_wePilot.fz);
+		printf("wePilot: hx: %d, hy: %d, hz: %d\n", _wePilot.hx, _wePilot.hy, _wePilot.hz);
+		printf("wePilot: Hours: %u, Minutes: %u, Seconds: %4.8f\n", _wePilot.time.hours, _wePilot.time.minutes, (double)_wePilot.time.seconds);
+		printf("wePilot: Rotor: %u, FCS State: %u, PWM: %u, GPS Sat: %u\n", _wePilot.rotor, _wePilot.fcsState, _wePilot.pwm_inp7, _wePilot.gpsSat);
+		printf("Receive Time: %u\n",timeTotal);
+		printf("\n");
 
-		outBuffer[i++]='s';
-		memcpy(&outBuffer[i],&time,sizeof(time));
-		i=i+sizeof(time); //i=8
-		outBuffer[i++]=pack->cnt;
-		outBuffer[i++]=pack->accX[2];
-		outBuffer[i++]=pack->accX[1];
-		outBuffer[i++]=pack->accX[0];
-		outBuffer[i++]=pack->accY[2];
-		outBuffer[i++]=pack->accY[1];
-		outBuffer[i++]=pack->accY[0];
-		outBuffer[i++]=pack->accZ[2];
-		outBuffer[i++]=pack->accZ[1];
-		outBuffer[i++]=pack->accZ[0];
-		outBuffer[i++]=pack->gyroX[2];
-		outBuffer[i++]=pack->gyroX[1];
-		outBuffer[i++]=pack->gyroX[0];
-		outBuffer[i++]=pack->gyroY[2];
-		outBuffer[i++]=pack->gyroY[1];
-		outBuffer[i++]=pack->gyroY[0];
-		outBuffer[i++]=pack->gyroZ[2];
-		outBuffer[i++]=pack->gyroZ[1];
-		outBuffer[i++]=pack->gyroZ[0];
-		outBuffer[i++]=pack->gyroStat;
-		outBuffer[i++]=pack->accStat;
-		outBuffer[i++]=pack->incStat;
-		outBuffer[i++]='\r';
-		outBuffer[i++]='\n';
-		out.putData(outBuffer,i);
-			
-#ifdef STREAM_MPU600
-	orb_check(_accel_sub, &accel_updated);
-	if (accel_updated) {
-		/**
-		  *As accel and gyro rom mpu6000 are updated in the same function. I intented gyro is also updated and has same timestamp 
-		  */
-		orb_copy(ORB_ID(sensor_accel0), _accel_sub, &accel_report);
-		orb_copy(ORB_ID(sensor_gyro0), _gyro_sub, &gyro_report);
-		i=0;
-		outBuffer[i++]='m';
-		memcpy(&outBuffer[i],&(accel_report.timestamp),sizeof(accel_report.timestamp));
-		i=i+sizeof(accel_report.timestamp); //i=8
-		memcpy(&outBuffer[i],&(accel_report.x_raw),sizeof(accel_report.x_raw));
-		i=i+sizeof(accel_report.x_raw); //i=2
-		memcpy(&outBuffer[i],&(accel_report.y_raw),sizeof(accel_report.y_raw));
-		i=i+sizeof(accel_report.y_raw); //i=2
-		memcpy(&outBuffer[i],&(accel_report.z_raw),sizeof(accel_report.z_raw));
-		i=i+sizeof(accel_report.z_raw); //i=2
-		memcpy(&outBuffer[i],&(gyro_report.x_raw),sizeof(gyro_report.x_raw));
-		i=i+sizeof(gyro_report.x_raw); //i=2
-		memcpy(&outBuffer[i],&(gyro_report.y_raw),sizeof(gyro_report.y_raw));
-		i=i+sizeof(gyro_report.y_raw); //i=2
-		memcpy(&outBuffer[i],&(gyro_report.z_raw),sizeof(gyro_report.z_raw));
-		i=i+sizeof(accel_report.z_raw); //i=2
-		outBuffer[i++]='\r';
-		outBuffer[i++]='\n';
-		out.putData(outBuffer,i);
-
+		cnt++;
 	}
-#endif
-		/*GPS Position*/
-	/*		orb_check(_gps_position_sub, &gps_updated);
-		if (gps_updated) {
-			struct novatel_bestpos_s pos;
-			orb_copy(ORB_ID(novatel_bestpos), _gps_position_sub, &pos);
-			i=0;
-			outBuffer[i++]='p';
-			out.putData(outBuffer,i);
-			out.putData((uint8_t *)&pos,sizeof(pos));
-			i=0;
-			outBuffer[i++]='\r';
-			outBuffer[i++]='\n';
-			out.putData(outBuffer,i);
-		}*/
-
-		/*GPS Velocity*/
-	/*		orb_check(_gps_velocity_sub, &gps_updated);
-		if (gps_updated) {
-			struct novatel_bestvel_s vel;
-			orb_copy(ORB_ID(novatel_bestvel), _gps_velocity_sub, &vel);
-			i=0;
-			outBuffer[i++]='v';
-			out.putData(outBuffer,i);
-			out.putData((uint8_t *)&vel,sizeof(vel));
-			i=0;
-			outBuffer[i++]='\r';
-			outBuffer[i++]='\n';
-			out.putData(outBuffer,i);
-		}*/
-
-		/*GPS Heading*/
-	/*		orb_check(_gps_heading_sub, &gps_updated);
-		if (gps_updated) {
-			struct novatel_heading_s heading;
-			orb_copy(ORB_ID(novatel_heading), _gps_heading_sub, &heading);
-			i=0;
-			outBuffer[i++]='h';
-			out.putData(outBuffer,i);
-			out.putData((uint8_t *)&heading,sizeof(heading));
-			i=0;
-			outBuffer[i++]='\r';
-			outBuffer[i++]='\n';
-			out.putData(outBuffer,i);
-		}*/
-
-	}
-	out.serialClose();
-}
-#ifdef STREAM_MPU600 
-void
-Stim300::board_accel_init(void){
-	int accel;
-	accel  = ::open(ACCEL_DEVICE_PATH, 0);
-	 if (accel < 0) { 
-		 printf("%s: ", ACCEL_DEVICE_PATH);
-		 printf("FATAL: no onboard accelerometer found. Check if mpu6000 is started");
-		 /* set the accel internal sampling rate up to at leat 1000Hz */
-		 ::ioctl(accel, ACCELIOCSSAMPLERATE, 1000);
-
-		 /* set the driver to poll at 1000Hz */
-		 ::ioctl(accel, SENSORIOCSPOLLRATE, 1000);
-	 } else {
-		 ::close(accel);
-	 }
-
-
 
 }
-#endif
+
 
 
 
