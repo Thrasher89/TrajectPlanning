@@ -485,6 +485,7 @@ Stim300::readThread()
 		printf("wePilot: hx: %d, hy: %d, hz: %d\n", _wePilot.hx, _wePilot.hy, _wePilot.hz);
 		printf("wePilot: Hours: %u, Minutes: %u, Seconds: %4.8f\n", _wePilot.time.hours, _wePilot.time.minutes, (double)_wePilot.time.seconds);
 		printf("wePilot: Rotor: %u, FCS State: %u, PWM: %u, GPS Sat: %u\n", _wePilot.rotor, _wePilot.fcsState, _wePilot.pwm_inp7, _wePilot.gpsSat);
+		printf("Datagramm-Read-Cnt: %u, Datagramm-Read-Errors: %u, Datagramm-CRC-Errors: %u\n",datagrammReadCnt,datagrammReadErrCnt,datagrammCRCErrCnt);
 		printf("Receive Time: %u\n",timeTotal);
 		printf("\n");
 
