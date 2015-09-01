@@ -302,7 +302,7 @@ Stim300::startUp(){
 		fflush(stdout);
 		sleep(1);
 	}
-	printf("\rStarting up");
+	printf("\rStarting up like Hell!");
 	serialOpen(true);
 
 	/**
