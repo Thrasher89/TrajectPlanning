@@ -60,7 +60,7 @@
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_bodyframe_speed.h>
 #include <uORB/topics/vehicle_bodyframe_speed_setpoint.h>
-#include <uORB/topics/wePilot.h>
+#include <uORB/topics/wePilot_info.h>
 
 #include <sched.h>
 #include "serial.h"
@@ -148,28 +148,28 @@ namespace stim300
 
 			/* create topic metadata */
 			ORB_DEFINE(vehicle_bodyframe_speed, struct vehicle_bodyframe_speed_s);
-			ORB_DEFINE(wePilot, struct wePilot_s);
+			ORB_DEFINE(wePilot_info, struct wePilot_info_s);
 
 			int		_global_position_sub;
 			int		_local_position_sub;
 			int		_attitude_sub;
 			int		_bodyframe_speed_sub;
 			int		_bodyframe_speed_setpoint_sub;
-			int		_wePilot_sub;
+			int		_wePilot_info_sub;
 
 			orb_advert_t	_global_position_pub;			/**< Global Position */
 			orb_advert_t	_local_position_pub;			/**< Local Position */
 			orb_advert_t	_attitude_pub;					/**< Attitude */
 			orb_advert_t	_bodyframe_speed_pub;			/**< Vehicle Bodyframe Speed */
-			orb_advert_t	_bodyframe_speed_pub_setpoint;	/**< Vehicle Bodyframe Speed Setpoint*/
-			orb_advert_t	_wePilot_pub;					/**< wePilot */
+			orb_advert_t	_bodyframe_speed_setpoint_pub;	/**< Vehicle Bodyframe Speed Setpoint*/
+			orb_advert_t	_wePilot_info_pub;					/**< wePilot */
 
 			struct vehicle_global_position_s _global_position;
 			struct vehicle_local_position_s _local_position;
 			struct vehicle_attitude_s _attitude;
 			struct vehicle_bodyframe_speed_s _bodyframe_speed;
-			struct vehicle_bodyframe_speed_s _bodyframe_speed_setpoint;
-			struct wePilot_s _wePilot;
+			struct vehicle_bodyframe_speed_setpoint_s _bodyframe_speed_setpoint;
+			struct wePilot_info_s _wePilot_info;
 
 
 		protected:

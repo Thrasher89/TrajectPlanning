@@ -412,19 +412,19 @@ Stim300::readThread()
 		_bodyframe_speed.yaw_sp = (float)conv16bit2int16(raw->refR[1],raw->refR[0])/1000.0f;
 
 	//	wePilot
-		_wePilot.fx = (float)conv32bit2float(raw->fX[3],raw->fX[2],raw->fX[1],raw->fX[0]);
-		_wePilot.fy = (float)conv32bit2float(raw->fY[3],raw->fY[2],raw->fY[1],raw->fY[0]);
-		_wePilot.fz = (float)conv32bit2float(raw->fZ[3],raw->fZ[2],raw->fZ[1],raw->fZ[0]);
-		_wePilot.hx = conv16bit2int16(raw->hx[1],raw->hx[0]);
-		_wePilot.hy = conv16bit2int16(raw->hy[1],raw->hy[0]);
-		_wePilot.hz = conv16bit2int16(raw->hz[1],raw->hz[0]);
-		_wePilot.rotor = conv16bit2uint16(raw->rotor[1],raw->rotor[0]);
-		_wePilot.time.hours = conv8bit2uint8(raw->time[3]);
-		_wePilot.time.minutes = conv8bit2uint8(raw->time[2]);
-		_wePilot.time.seconds = (float)conv16bit2uint16(raw->time[1],raw->time[0])/1000.0f;
-		_wePilot.fcsState = conv8bit2uint8(raw->status[0] & 0b00001111);
-		_wePilot.pwm_inp7 = conv8bit2uint8(raw->status[0] & 0b00010000)>>4;
-		_wePilot.gpsSat = conv8bit2uint8(raw->status[1] & 0b00001111);
+		_wePilot_info.fx = (float)conv32bit2float(raw->fX[3],raw->fX[2],raw->fX[1],raw->fX[0]);
+		_wePilot_info.fy = (float)conv32bit2float(raw->fY[3],raw->fY[2],raw->fY[1],raw->fY[0]);
+		_wePilot_info.fz = (float)conv32bit2float(raw->fZ[3],raw->fZ[2],raw->fZ[1],raw->fZ[0]);
+		_wePilot_info.hx = conv16bit2int16(raw->hx[1],raw->hx[0]);
+		_wePilot_info.hy = conv16bit2int16(raw->hy[1],raw->hy[0]);
+		_wePilot_info.hz = conv16bit2int16(raw->hz[1],raw->hz[0]);
+		_wePilot_info.rotor = conv16bit2uint16(raw->rotor[1],raw->rotor[0]);
+		_wePilot_info.time.hours = conv8bit2uint8(raw->time[3]);
+		_wePilot_info.time.minutes = conv8bit2uint8(raw->time[2]);
+		_wePilot_info.time.seconds = (float)conv16bit2uint16(raw->time[1],raw->time[0])/1000.0f;
+		_wePilot_info.fcsState = conv8bit2uint8(raw->status[0] & 0b00001111);
+		_wePilot_info.pwm_inp7 = conv8bit2uint8(raw->status[0] & 0b00010000)>>4;
+		_wePilot_info.gpsSat = conv8bit2uint8(raw->status[1] & 0b00001111);
 
 
 	//	Start2ConvertionTime  = (int)(hrt_absolute_time()-timeStart); // Stop time
@@ -443,8 +443,8 @@ Stim300::readThread()
 		if (_bodyframe_speed_pub > 0) orb_publish(ORB_ID(vehicle_bodyframe_speed), _bodyframe_speed_pub, &_bodyframe_speed);
 		else _bodyframe_speed_pub = orb_advertise(ORB_ID(vehicle_bodyframe_speed), &_bodyframe_speed);
 		/* announce the wePilot if needed, just publish else */
-		if (_wePilot_pub > 0) orb_publish(ORB_ID(wePilot), _wePilot_pub, &_wePilot);
-		else _wePilot_pub = orb_advertise(ORB_ID(wePilot), &_wePilot);
+		if (_wePilot_info_pub > 0) orb_publish(ORB_ID(wePilot_info), _wePilot_info_pub, &_wePilot_info);
+		else _wePilot_info_pub = orb_advertise(ORB_ID(wePilot_info), &_wePilot_info);
 
 	//	Start2PublishTime  = (int)(hrt_absolute_time()-timeStart); // Stop time
 
@@ -467,8 +467,8 @@ Stim300::readThread()
 		if (updated) orb_copy(ORB_ID(vehicle_bodyframe_speed), _bodyframe_speed_sub, &_bodyframe_speed);
 		else printf("Bodyframe Speed not subscribed!\n");
 		//	Check update wePilot
-		orb_check(_wePilot_sub, &updated);
-		if (updated) orb_copy(ORB_ID(wePilot), _wePilot_sub, &_wePilot);
+		orb_check(_wePilot_info_sub, &updated);
+		if (updated) orb_copy(ORB_ID(wePilot_info), _wePilot_info_sub, &_wePilot_info);
 		else printf("wePilot not subscribed!\n");
 
 		timeTotal  = (int)(hrt_absolute_time()-timeStart); // Stop time
@@ -481,10 +481,10 @@ Stim300::readThread()
 		printf("Attitude: roll: %4.8f, pitch: %4.8f, yaw: %4.8f\n", (double)_attitude.roll, (double)_attitude.pitch, (double)_attitude.yaw);
 		printf("Attitude: rollspeed: %4.8f, pitchspeed: %4.8f, yawspeed: %4.8f\n", (double)_attitude.rollspeed, (double)_attitude.pitchspeed, (double)_attitude.yawspeed);
 		printf("Bodyframe: vx: %4.8f, vy: %4.8f, vz: %4.8f\n", (double)_bodyframe_speed.vx, (double)_bodyframe_speed.vy, (double)_bodyframe_speed.vz, (double)_bodyframe_speed.yaw_sp);
-		printf("wePilot: fx: %4.8f, fy: %4.8f, fz: %4.8f\n", (double)_wePilot.fx, (double)_wePilot.fy, (double)_wePilot.fz);
-		printf("wePilot: hx: %d, hy: %d, hz: %d\n", _wePilot.hx, _wePilot.hy, _wePilot.hz);
-		printf("wePilot: Hours: %u, Minutes: %u, Seconds: %4.8f\n", _wePilot.time.hours, _wePilot.time.minutes, (double)_wePilot.time.seconds);
-		printf("wePilot: Rotor: %u, FCS State: %u, PWM: %u, GPS Sat: %u\n", _wePilot.rotor, _wePilot.fcsState, _wePilot.pwm_inp7, _wePilot.gpsSat);
+		printf("wePilot: fx: %4.8f, fy: %4.8f, fz: %4.8f\n", (double)_wePilot_info.fx, (double)_wePilot_info.fy, (double)_wePilot_info.fz);
+		printf("wePilot: hx: %d, hy: %d, hz: %d\n", _wePilot_info.hx, _wePilot_info.hy, _wePilot_info.hz);
+		printf("wePilot: Hours: %u, Minutes: %u, Seconds: %4.8f\n", _wePilot_info.time.hours, _wePilot_info.time.minutes, (double)_wePilot_info.time.seconds);
+		printf("wePilot: Rotor: %u, FCS State: %u, PWM: %u, GPS Sat: %u\n", _wePilot_info.rotor, _wePilot_info.fcsState, _wePilot_info.pwm_inp7, _wePilot_info.gpsSat);
 		printf("Datagramm-Read-Cnt: %u, Datagramm-Read-Errors: %u, Datagramm-CRC-Errors: %u\n",datagrammReadCnt,datagrammReadErrCnt,datagrammCRCErrCnt);
 		printf("Receive Time: %u\n",timeTotal);
 		printf("\n");

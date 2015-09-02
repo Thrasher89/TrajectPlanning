@@ -70,6 +70,7 @@
 #include "ubx.h"
 #include "mtk.h"
 #include "ashtech.h"
+#include "wePilot.h"
 
 
 #define TIMEOUT_5HZ 500
@@ -117,8 +118,23 @@ private:
 	gps_driver_mode_t		_mode;						///< current mode
 	GPS_Helper			*_Helper;					///< instance of GPS parser
 	GPS_Sat_Info			*_Sat_Info;					///< instance of GPS sat info data object
+
 	struct vehicle_gps_position_s	_report_gps_pos;				///< uORB topic for gps position
-	orb_advert_t			_report_gps_pos_pub;				///< uORB pub for gps position
+	struct vehicle_global_position_s _report_global_position;
+	struct vehicle_local_position_s _report_local_position;
+	struct vehicle_attitude_s _report_attitude;
+	struct vehicle_bodyframe_speed_s _report_bodyframe_speed;
+	struct vehicle_bodyframe_speed_s _report_bodyframe_speed_setpoint;
+	struct wePilot_info_s _report_wePilot_info;
+
+	orb_advert_t	_report_gps_pos_pub;				///< uORB pub for gps position
+	orb_advert_t	_report_global_position_pub;			/**< Global Position */
+	orb_advert_t	_report_local_position_pub;			/**< Local Position */
+	orb_advert_t	_report_attitude_pub;					/**< Attitude */
+	orb_advert_t	_report_bodyframe_speed_pub;			/**< Vehicle Bodyframe Speed */
+	orb_advert_t	_report_bodyframe_speed_pub_setpoint;	/**< Vehicle Bodyframe Speed Setpoint*/
+	orb_advert_t	_report_wePilot_info_pub;					/**< wePilot */
+
 	struct satellite_info_s		*_p_report_sat_info;				///< pointer to uORB topic for satellite info
 	orb_advert_t			_report_sat_info_pub;				///< uORB pub for satellite info
 	float				_rate;						///< position update rate
@@ -172,7 +188,7 @@ GPS::GPS(const char *uart_path, bool fake_gps, bool enable_sat_info) :
 	_task_should_exit(false),
 	_healthy(false),
 	_mode_changed(false),
-	_mode(GPS_DRIVER_MODE_UBX),
+	_mode(GPS_DRIVER_MODE_WEPILOT),
 	_Helper(nullptr),
 	_Sat_Info(nullptr),
 	_report_gps_pos_pub(-1),
@@ -345,6 +361,11 @@ GPS::task_main()
 				_Helper = new ASHTECH(_serial_fd, &_report_gps_pos, _p_report_sat_info);
 				break;
 
+			case GPS_DRIVER_MODE_WEPILOT:
+//				_Helper = new WEPILOT(_serial_fd, &_report_global_position_pub, &_report_local_position_pub, &_report_attitude_pub, &_report_bodyframe_speed_pub, &_report_bodyframe_speed_pub_setpoint, &_report_wePilot_pub);
+				_Helper = new WEPILOT(_serial_fd);
+				break;
+
 			default:
 				break;
 			}
@@ -497,6 +518,10 @@ GPS::print_info()
 	case GPS_DRIVER_MODE_ASHTECH:
 		warnx("protocol: ASHTECH");
 		break;
+
+	case GPS_DRIVER_MODE_WEPILOT:
+			warnx("protocol: WEPILOT");
+			break;
 
 		default:
 			break;

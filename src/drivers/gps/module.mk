@@ -41,6 +41,7 @@ SRCS		= gps.cpp \
 		  gps_helper.cpp \
 		  mtk.cpp \
 		  ashtech.cpp \
+		  wePilot.cpp \
 		  ubx.cpp
 
 MODULE_STACKSIZE = 1200
